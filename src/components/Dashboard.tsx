@@ -242,7 +242,7 @@ export default function Dashboard() {
                   <div key={idx} className="category-item">
                     <div className="cat-header">
                       <span>{item.cat}</span>
-                      <span className="cat-count">{item.current}/{item.total}</span>
+                      <span className="cat-count">&nbsp;{item.current}/{item.total}</span>
                     </div>
                     <div className="progress-bar-bg">
                       <div 
