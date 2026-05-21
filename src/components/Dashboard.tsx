@@ -186,10 +186,10 @@ export default function Dashboard() {
                       </td>
                       <td data-label="Acciones">
                         <div className="action-container" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                          <button className="edit-btn" onClick={() => handleEdit(item.id!)} title="Editar">
+                          {/* <button className="edit-btn" onClick={() => handleEdit(item.id!)} title="Editar">
                             ✏️
                           </button>
-                          
+                           */}
                           {!isDesktop && (
                             <div className="action-btns" style={{ display: 'flex', gap: '0.25rem' }}>
                               <button 

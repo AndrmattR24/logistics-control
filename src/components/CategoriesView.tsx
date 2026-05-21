@@ -38,13 +38,13 @@ export const CategoriesView = () => {
           {categories.map(c => (
             <li key={c} className="category-item">
               <span>{c}</span>
-              {isDesktop && (
+              {/* {isDesktop && (
                 <button
                   className="edit-btn"
                   title="Editar categoría"
                   onClick={() => handleEdit(c)}
                 >✏️</button>
-              )}
+              )} */}
             </li>
           ))}
         </ul>
@@ -56,13 +56,13 @@ export const CategoriesView = () => {
           {subcategories.map(s => (
             <li key={s} className="subcategory-item">
               <span>{s}</span>
-              {isDesktop && (
+              {/* {isDesktop && (
                 <button
                   className="edit-btn"
                   title="Editar subcategoría"
                   onClick={() => handleEdit(s)}
                 >✏️</button>
-              )}
+              )} */}
             </li>
           ))}
         </ul>
