@@ -283,6 +283,8 @@ tr:not(:last-child) {
 }
 .action-btn-success { background-color: var(--success-color); }
 .action-btn-danger { background-color: var(--danger-color); }
+.action-btn-warning { background-color: var(--warning-color); }
+.action-btn-primary { background-color: var(--primary-btn); }
 
 /* Sidebar */
 .sidebar {

@@ -9,6 +9,11 @@ export function useDashboardViewModel() {
   const [searchSku, setSearchSku] = useState<string>('');
   const [searchDesc, setSearchDesc] = useState<string>('');
   const [isAddingProduct, setIsAddingProduct] = useState<boolean>(false);
+  
+  // Estado para controlar si estamos editando y qué ID se está modificando
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  // Campos del formulario (compartidos para creación y edición)
   const [modalSku, setModalSku] = useState<string>('');
   const [modalDesc, setModalDesc] = useState<string>('');
   const [modalSub, setModalSub] = useState<string>('');
@@ -36,7 +41,6 @@ export function useDashboardViewModel() {
     const product = products[index];
     if (product.status === newStatus) return;
 
-    // Optimistic update
     const newData = [...products];
     newData[index].status = newStatus;
     setProducts(newData);
@@ -53,6 +57,20 @@ export function useDashboardViewModel() {
     }
   };
 
+  // Carga los datos de un producto existente en el formulario y abre el modal
+  const loadProductToEdit = (id: string) => {
+    const product = products.find(p => p.id === id);
+    if (!product) return;
+
+    setEditingProductId(id);
+    setModalSku(product.sku);
+    setModalPlu(product.plu || '');
+    setModalDesc(product.desc);
+    setModalSub(product.sub === '-' ? '' : product.sub || '');
+    setModalCat(product.cat);
+    setIsAddingProduct(true);
+  };
+
   const handleAddProduct = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!modalSku || !modalDesc || !modalCat) return;
@@ -67,18 +85,66 @@ export function useDashboardViewModel() {
       };
       const newProduct = await ProductRepository.create(newProductData);
       setProducts([newProduct, ...products]);
-      setModalSku('');
-      setModalPlu('');
-      setModalDesc('');
-      setModalSub('');
-      setIsAddingProduct(false);
+      resetForm();
     } catch (error) {
       console.error("Error adding product:", error);
     }
   };
 
-  const openModal = () => setIsAddingProduct(true);
-  const closeModal = () => setIsAddingProduct(false);
+  // Procesa los cambios editados y los guarda en el repositorio
+  const handleUpdateProduct = async () => {
+    if (!editingProductId || !modalSku || !modalDesc || !modalCat) return;
+
+    const currentProduct = products.find(p => p.id === editingProductId);
+    if (!currentProduct) return;
+
+    // Estructuramos los datos actualizados conservando el ID y el Estado actual
+    const updatedProduct: Product = {
+      ...currentProduct,
+      sku: modalSku,
+      plu: modalPlu,
+      desc: modalDesc.toUpperCase(),
+      sub: modalSub ? modalSub.toUpperCase() : '-',
+      cat: modalCat,
+    };
+
+    // Actualización optimista en la UI
+    const updatedProducts = products.map(p => p.id === editingProductId ? updatedProduct : p);
+    setProducts(updatedProducts);
+    resetForm();
+
+    try {
+      // Nota: Asegúrate de que tu ProductRepository tenga un método genérico de actualización
+      if (ProductRepository.update) {
+        await ProductRepository.update(editingProductId, updatedProduct);
+      } else {
+        // Fallback si solo maneja updateStatus en tu backend actual
+        console.warn("ProductRepository.update no está implementado en la infraestructura.");
+      }
+    } catch (error) {
+      console.error("Error updating product:", error);
+      fetchProducts(); // En caso de fallo, reasincronizamos con el servidor
+    }
+  };
+
+  const openModal = () => {
+    setEditingProductId(null); // Nos aseguramos de limpiar cualquier ID previo para que asuma creación
+    setIsAddingProduct(true);
+  };
+
+  const closeModal = () => {
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setEditingProductId(null);
+    setModalSku('');
+    setModalPlu('');
+    setModalDesc('');
+    setModalSub('');
+    setModalCat('CARNES');
+    setIsAddingProduct(false);
+  };
 
   const metrics = DashboardMetrics.calculate(products);
   const filteredProducts = DashboardMetrics.filterProducts(products, searchSku, searchDesc);
@@ -93,6 +159,7 @@ export function useDashboardViewModel() {
       isNotFound,
       metrics,
       isAddingProduct,
+      editingProductId, // Expuesto para cambiar los textos dinámicamente en el modal de la vista
       modalSku,
       modalPlu,
       modalDesc,
@@ -104,6 +171,8 @@ export function useDashboardViewModel() {
       setSearchDesc,
       handleStatusChange,
       handleAddProduct,
+      handleUpdateProduct, // Nueva acción expuesta
+      loadProductToEdit,   // Nueva acción expuesta
       setModalSku,
       setModalPlu,
       setModalDesc,
