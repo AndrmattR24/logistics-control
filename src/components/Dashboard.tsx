@@ -101,7 +101,7 @@ export default function Dashboard() {
         </div>
         <div className="header-actions">
           <button className="btn btn-primary" onClick={openModal}>
-            Registrar Control
+            + Nuevo Producto
           </button>
           <button className="btn btn-outline">Exportar Reporte Diario</button>
         </div>
@@ -191,13 +191,6 @@ export default function Dashboard() {
               <h2>Validación de Productos</h2>
               <p>Escanea o ingresa SKU / PLU</p>
             </div>
-            <button
-              className="btn btn-outline"
-              style={{ fontSize: "0.75rem", padding: "0.4rem 0.8rem" }}
-              onClick={openModal}
-            >
-              + Nuevo Producto
-            </button>
           </div>
           <div className="search-row">
             <input
