@@ -5,10 +5,13 @@ import "./Dashboard.css";
 export default function Dashboard() {
   const { state, actions } = useDashboardViewModel();
 
-  // Estado local para manejar el comportamiento responsive de manera segura (evita errores de hidratación/SSR)
+  // Estado para controlar el responsive de manera segura
   const [isDesktop, setIsDesktop] = useState(
     typeof window !== "undefined" && window.innerWidth > 768,
   );
+
+  // CONTROL DE SECUENCIA: Estado para el Spinner de pantalla completa inicial
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth > 768);
@@ -32,6 +35,15 @@ export default function Dashboard() {
     editingProductId,
   } = state;
 
+  // EFECTO DE TRANSICIÓN: El spinner se apaga y le cede el paso al layout con Skeletons
+  useEffect(() => {
+    if (!loading && isInitialLoading) {
+      // Un pequeño delay de 300ms para suavizar la salida de la pantalla de bienvenida
+      const timer = setTimeout(() => setIsInitialLoading(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, isInitialLoading]);
+
   const {
     setSearchSku,
     setSearchDesc,
@@ -48,12 +60,10 @@ export default function Dashboard() {
     closeModal,
   } = actions;
 
-  // Ejecuta la carga de datos del producto seleccionado hacia el formulario del modal
   const handleEdit = (id: string | number) => {
     loadProductToEdit(String(id));
   };
 
-  // Intercepta el submit para decidir si crea o actualiza
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingProductId) {
@@ -63,6 +73,24 @@ export default function Dashboard() {
     }
   };
 
+  // ==========================================
+  // PASO 1: SPINNER DE PANTALLA COMPLETA
+  // ==========================================
+  if (isInitialLoading) {
+    return (
+      <div className="app-splash-screen">
+        <div className="spinner-container">
+          <div className="loading-spinner"></div>
+          <h2>Logistic Control System</h2>
+          <p>Conectando con la base de datos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // PASO 2 Y 3: DASHBOARD PRINCIPAL (CON SKELETONS INTEGRADOS)
+  // ==========================================
   return (
     <div className="dashboard">
       {/* Header */}
@@ -189,7 +217,10 @@ export default function Dashboard() {
           </div>
 
           <div className="table-container">
-            {isNotFound ? (
+            {loading ? (
+              // SEGUNDO PASO DE CARGA: El esqueleto animado toma el control de la tabla
+              <TableSkeleton isDesktop={isDesktop} />
+            ) : isNotFound ? (
               <div
                 style={{
                   padding: "2rem",
@@ -275,7 +306,6 @@ export default function Dashboard() {
                             flexWrap: "wrap",
                           }}
                         >
-                          {/* CORRECCIÓN: El lápiz ahora solo aparece si isDesktop es true */}
                           {isDesktop && (
                             <button
                               className="edit-btn"
@@ -342,45 +372,72 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right Column */}
+        {/* Right Column (Sidebar) */}
         <div className="sidebar">
           <div className="card critical-items-card">
             <h2>Productos Críticos</h2>
             <div className="critical-list">
-              {metrics.criticalProducts?.map((item, idx) => (
-                <div key={idx} className="critical-item">
-                  <div className="critical-item-info">
-                    <span className="critical-item-title">{item.desc}</span>
-                    <span className="critical-item-cat">{item.sub}</span>
-                  </div>
-                  <span className="badge badge-break">QUIEBRE</span>
-                </div>
-              ))}
+              {loading
+                ? [1, 2, 3].map((n) => (
+                    <div
+                      key={n}
+                      className="critical-item skeleton-pulse"
+                      style={{
+                        height: "48px",
+                        background: "#e2e8f0",
+                        border: "none",
+                        marginBottom: "0.5rem",
+                        borderRadius: "6px",
+                      }}
+                    ></div>
+                  ))
+                : metrics.criticalProducts?.map((item, idx) => (
+                    <div key={idx} className="critical-item">
+                      <div className="critical-item-info">
+                        <span className="critical-item-title">{item.desc}</span>
+                        <span className="critical-item-cat">{item.sub}</span>
+                      </div>
+                      <span className="badge badge-break">QUIEBRE</span>
+                    </div>
+                  ))}
             </div>
           </div>
 
           <div className="card category-break-card">
             <h2>Quiebres por Categoría</h2>
             <div className="category-list">
-              {metrics.categoryBreaks?.map((item, idx) => {
-                const percentage = (item.current / item.total) * 100;
-                return (
-                  <div key={idx} className="category-item">
-                    <div className="cat-header">
-                      <span>{item.cat}</span>
-                      <span className="cat-count">
-                        &nbsp;{item.current}/{item.total}
-                      </span>
-                    </div>
-                    <div className="progress-bar-bg">
-                      <div
-                        className="progress-bar-fill"
-                        style={{ width: `${percentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })}
+              {loading
+                ? [1, 2, 3].map((n) => (
+                    <div
+                      key={n}
+                      className="category-item skeleton-pulse"
+                      style={{
+                        height: "35px",
+                        background: "#e2e8f0",
+                        marginBottom: "0.75rem",
+                        borderRadius: "4px",
+                      }}
+                    ></div>
+                  ))
+                : metrics.categoryBreaks?.map((item, idx) => {
+                    const percentage = (item.current / item.total) * 100;
+                    return (
+                      <div key={idx} className="category-item">
+                        <div className="cat-header">
+                          <span>{item.cat}</span>
+                          <span className="cat-count">
+                            &nbsp;{item.current}/{item.total}
+                          </span>
+                        </div>
+                        <div className="progress-bar-bg">
+                          <div
+                            className="progress-bar-fill"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
             </div>
           </div>
         </div>
@@ -476,5 +533,111 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+// SUBCOMPONENTE DE SKELETON RESPONSIVE REUTILIZABLE
+function TableSkeleton({ isDesktop }: { isDesktop: boolean }) {
+  const skeletonPulseStyle = {
+    animation: "pulse 1.5s infinite ease-in-out",
+    backgroundColor: "#e2e8f0",
+    borderRadius: "4px",
+    height: "20px",
+  };
+
+  if (!isDesktop) {
+    return (
+      <div
+        className="skeleton-mobile-container"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem",
+          marginTop: "1rem",
+        }}
+      >
+        {[1, 2, 3].map((n) => (
+          <div
+            key={n}
+            className="card"
+            style={{
+              padding: "1rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.75rem",
+            }}
+          >
+            <div
+              style={{ ...skeletonPulseStyle, width: "40%", height: "16px" }}
+            />
+            <div
+              style={{ ...skeletonPulseStyle, width: "85%", height: "22px" }}
+            />
+            <div
+              style={{ ...skeletonPulseStyle, width: "60%", height: "14px" }}
+            />
+            <div
+              style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}
+            >
+              <div style={{ ...skeletonPulseStyle, flex: 1, height: "34px" }} />
+              <div style={{ ...skeletonPulseStyle, flex: 1, height: "34px" }} />
+              <div style={{ ...skeletonPulseStyle, flex: 1, height: "34px" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <table style={{ marginTop: "1rem" }}>
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>PLU</th>
+          <th>Descripción</th>
+          <th>Subcategoría</th>
+          <th>Categoría</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[1, 2, 3, 4].map((n) => (
+          <tr key={n}>
+            <td>
+              <div style={{ ...skeletonPulseStyle, width: "70px" }} />
+            </td>
+            <td>
+              <div style={{ ...skeletonPulseStyle, width: "50px" }} />
+            </td>
+            <td>
+              <div style={{ ...skeletonPulseStyle, width: "180px" }} />
+            </td>
+            <td>
+              <div style={{ ...skeletonPulseStyle, width: "100px" }} />
+            </td>
+            <td>
+              <div style={{ ...skeletonPulseStyle, width: "90px" }} />
+            </td>
+            <td>
+              <div
+                style={{
+                  ...skeletonPulseStyle,
+                  width: "85px",
+                  borderRadius: "20px",
+                  height: "24px",
+                }}
+              />
+            </td>
+            <td>
+              <div
+                style={{ ...skeletonPulseStyle, width: "40px", height: "35px" }}
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
