@@ -20,4 +20,14 @@ export class ProductRepository {
     const docRef = await addDoc(collection(db, 'products'), product);
     return { id: docRef.id, ...product };
   }
+
+  // NUEVO MÉTODO CORREGIDO PARA LA EDICIÓN COMPLETA
+  static async update(id: string, product: Product): Promise<void> {
+    const productRef = doc(db, 'products', id);
+    
+    // Desestructuramos para separar el 'id' del resto de los datos.
+    // Firebase Firestore rechaza o duplica de manera limpia si mandas el id en el cuerpo.
+    const { id: _, ...dataToUpdate } = product;
+    await updateDoc(productRef, dataToUpdate);
+  }
 }

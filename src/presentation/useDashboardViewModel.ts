@@ -83,7 +83,7 @@ export function useDashboardViewModel() {
         cat: modalCat,
         status: 'DISPONIBLE'
       };
-      const newProduct = await ProductRepository.create(newProductData);
+      const newProduct = await ProductProductRepository.create(newProductData);
       setProducts([newProduct, ...products]);
       resetForm();
     } catch (error) {
@@ -98,7 +98,7 @@ export function useDashboardViewModel() {
     const currentProduct = products.find(p => p.id === editingProductId);
     if (!currentProduct) return;
 
-    // Estructuramos los datos actualizados conservando el ID y el Estado actual
+    // 1. Estructuramos los datos actualizados conservando el ID y el Estado actual
     const updatedProduct: Product = {
       ...currentProduct,
       sku: modalSku,
@@ -108,22 +108,22 @@ export function useDashboardViewModel() {
       cat: modalCat,
     };
 
-    // Actualización optimista en la UI
+    // 2. Actualización optimista inmediata en la UI para mantenerla fluida
     const updatedProducts = products.map(p => p.id === editingProductId ? updatedProduct : p);
     setProducts(updatedProducts);
-    resetForm();
 
     try {
-      // Nota: Asegúrate de que tu ProductRepository tenga un método genérico de actualización
-      if (ProductRepository.update) {
-        await ProductRepository.update(editingProductId, updatedProduct);
-      } else {
-        // Fallback si solo maneja updateStatus en tu backend actual
-        console.warn("ProductRepository.update no está implementado en la infraestructura.");
-      }
+      // 3. Forzamos la llamada real a la persistencia eliminando el condicional silencioso
+      await ProductRepository.update(editingProductId, updatedProduct);
+      
+      // 4. Limpiamos y cerramos el modal SÓLO si la base de datos confirmó el éxito
+      resetForm();
     } catch (error) {
-      console.error("Error updating product:", error);
-      fetchProducts(); // En caso de fallo, reasincronizamos con el servidor
+      console.error("Error updating product in database:", error);
+      
+      // 5. Rollback: Si la API falla, revertimos la UI consultando el estado real del servidor
+      fetchProducts(); 
+      alert("No se pudieron consolidar los cambios en el servidor. La vista ha sido revertida.");
     }
   };
 
@@ -159,7 +159,7 @@ export function useDashboardViewModel() {
       isNotFound,
       metrics,
       isAddingProduct,
-      editingProductId, // Expuesto para cambiar los textos dinámicamente en el modal de la vista
+      editingProductId, 
       modalSku,
       modalPlu,
       modalDesc,
@@ -171,8 +171,8 @@ export function useDashboardViewModel() {
       setSearchDesc,
       handleStatusChange,
       handleAddProduct,
-      handleUpdateProduct, // Nueva acción expuesta
-      loadProductToEdit,   // Nueva acción expuesta
+      handleUpdateProduct, 
+      loadProductToEdit,   
       setModalSku,
       setModalPlu,
       setModalDesc,
