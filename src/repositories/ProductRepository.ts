@@ -17,7 +17,7 @@ export class ProductRepository {
       const productsRef = collection(db, 'products');
       
       // Creamos la consulta explícita con el límite
-      const q = query(productsRef, orderBy("desc", "asc"), limit(30));
+      const q = query(productsRef, orderBy("desc", "asc"), limit(20));
 
       const querySnapshot = await getDocs(q);
       

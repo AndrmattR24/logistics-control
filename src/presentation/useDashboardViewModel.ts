@@ -10,6 +10,10 @@ export function useDashboardViewModel() {
   const [searchDesc, setSearchDesc] = useState<string>("");
   const [isAddingProduct, setIsAddingProduct] = useState<boolean>(false);
 
+  // NUEVO: Estado para controlar la página actual
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 10;
+
   // Estado para controlar si estamos editando y qué ID se está modificando
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
@@ -24,13 +28,17 @@ export function useDashboardViewModel() {
     fetchProducts();
   }, []);
 
-  // MODIFICADO: Ahora usa el método optimizado getRecent()
+  // NUEVO: Cada vez que el usuario escriba en los buscadores, reiniciamos a la página 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchSku, searchDesc]);
+
   const fetchProducts = async () => {
-    setLoading(true); // Asegúrate de que el estado de carga se active al iniciar la petición
+    setLoading(true); 
     try {
-      // 1. Pide solo los 30 más recientes
-      const data = await ProductRepository.getAll();
-      setProducts(data);
+      const fullData = await ProductRepository.getAll();
+      console.log("fullData", fullData);
+      setProducts(fullData);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -60,7 +68,6 @@ export function useDashboardViewModel() {
     }
   };
 
-  // Carga los datos de un producto existente en el formulario y abre el modal
   const loadProductToEdit = (id: string) => {
     const product = products.find((p) => p.id === id);
     if (!product) return;
@@ -87,9 +94,7 @@ export function useDashboardViewModel() {
         status: "DISPONIBLE",
       };
 
-      // CORREGIDO: Cambiado ProductProductRepository por ProductRepository
       const newProduct = await ProductRepository.create(newProductData);
-
       setProducts([newProduct, ...products]);
       resetForm();
     } catch (error) {
@@ -97,14 +102,12 @@ export function useDashboardViewModel() {
     }
   };
 
-  // Procesa los cambios editados y los guarda en el repositorio
   const handleUpdateProduct = async () => {
     if (!editingProductId || !modalSku || !modalDesc || !modalCat) return;
 
     const currentProduct = products.find((p) => p.id === editingProductId);
     if (!currentProduct) return;
 
-    // 1. Estructuramos los datos actualizados conservando el ID y el Estado actual
     const updatedProduct: Product = {
       ...currentProduct,
       sku: modalSku,
@@ -114,31 +117,23 @@ export function useDashboardViewModel() {
       cat: modalCat,
     };
 
-    // 2. Actualización optimista inmediata en la UI para mantenerla fluida
     const updatedProducts = products.map((p) =>
       p.id === editingProductId ? updatedProduct : p,
     );
     setProducts(updatedProducts);
 
     try {
-      // 3. Forzamos la llamada real a la persistencia eliminando el condicional silencioso
       await ProductRepository.update(editingProductId, updatedProduct);
-
-      // 4. Limpiamos y cerramos el modal SÓLO si la base de datos confirmó el éxito
       resetForm();
     } catch (error) {
       console.error("Error updating product in database:", error);
-
-      // 5. Rollback: Si la API falla, revertimos la UI consultando el estado real del servidor
       fetchProducts();
-      alert(
-        "No se pudieron consolidar los cambios en el servidor. La vista ha sido revertida.",
-      );
+      alert("No se pudieron consolidar los cambios en el servidor. La vista ha sido revertida.");
     }
   };
 
   const openModal = () => {
-    setEditingProductId(null); // Nos aseguramos de limpiar cualquier ID previo para que asuma creación
+    setEditingProductId(null);
     setIsAddingProduct(true);
   };
 
@@ -156,17 +151,28 @@ export function useDashboardViewModel() {
     setIsAddingProduct(false);
   };
 
-  // Las métricas SÓLO se recalculan si el array original de productos cambia
+  // 1. Las métricas siguen leyendo TODOS los productos de la BD de forma global
   const metrics = useMemo(() => {
     return DashboardMetrics.calculate(products);
   }, [products]);
 
-  // El filtrado SÓLO se procesa si cambian los productos o los términos de búsqueda
-  const filteredProducts = useMemo(() => {
+  // 2. Primero filtramos todos los productos según los inputs del operador
+  const allFilteredProducts = useMemo(() => {
     return DashboardMetrics.filterProducts(products, searchSku, searchDesc);
   }, [products, searchSku, searchDesc]);
 
-  const isNotFound = searchSku.trim() !== "" && filteredProducts.length === 0;
+  // NUEVO: 3. Calculamos la cantidad total de páginas necesarias
+  const totalPages = useMemo(() => {
+    return Math.ceil(allFilteredProducts.length / ITEMS_PER_PAGE) || 1;
+  }, [allFilteredProducts]);
+
+  // MODIFICADO: 4. Cortamos usando índices dinámicos dependientes de 'currentPage'
+  const filteredProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return allFilteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [allFilteredProducts, currentPage]);
+
+  const isNotFound = (searchSku.trim() !== "" || searchDesc.trim() !== "") && allFilteredProducts.length === 0;
 
   return {
     state: {
@@ -183,6 +189,8 @@ export function useDashboardViewModel() {
       modalDesc,
       modalSub,
       modalCat,
+      currentPage, // NUEVO: Enviamos al componente visual
+      totalPages,  // NUEVO: Enviamos al componente visual
     },
     actions: {
       setSearchSku,
@@ -198,6 +206,7 @@ export function useDashboardViewModel() {
       setModalCat,
       openModal,
       closeModal,
+      setCurrentPage, // NUEVO: Acción para cambiar de página desde los botones
     },
   };
 }

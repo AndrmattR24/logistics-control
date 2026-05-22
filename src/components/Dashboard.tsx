@@ -5,19 +5,8 @@ import "./Dashboard.css";
 export default function Dashboard() {
   const { state, actions } = useDashboardViewModel();
 
-  // Estado para controlar el responsive de manera segura
-  const [isDesktop, setIsDesktop] = useState(
-    typeof window !== "undefined" && window.innerWidth > 768,
-  );
-
   // CONTROL DE SECUENCIA: Estado para el Spinner de pantalla completa inicial
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-
-  useEffect(() => {
-    const handleResize = () => setIsDesktop(window.innerWidth > 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   const {
     loading,
@@ -33,12 +22,13 @@ export default function Dashboard() {
     modalSub,
     modalCat,
     editingProductId,
+    currentPage,
+    totalPages,
   } = state;
 
   // EFECTO DE TRANSICIÓN: El spinner se apaga y le cede el paso al layout con Skeletons
   useEffect(() => {
     if (!loading && isInitialLoading) {
-      // Un pequeño delay de 300ms para suavizar la salida de la pantalla de bienvenida
       const timer = setTimeout(() => setIsInitialLoading(false), 300);
       return () => clearTimeout(timer);
     }
@@ -58,6 +48,7 @@ export default function Dashboard() {
     setModalCat,
     openModal,
     closeModal,
+    setCurrentPage,
   } = actions;
 
   const handleEdit = (id: string | number) => {
@@ -89,7 +80,7 @@ export default function Dashboard() {
   }
 
   // ==========================================
-  // PASO 2 Y 3: DASHBOARD PRINCIPAL (CON SKELETONS INTEGRADOS)
+  // PASO 2 Y 3: DASHBOARD PRINCIPAL
   // ==========================================
   return (
     <div className="dashboard">
@@ -211,8 +202,7 @@ export default function Dashboard() {
 
           <div className="table-container">
             {loading ? (
-              // SEGUNDO PASO DE CARGA: El esqueleto animado toma el control de la tabla
-              <TableSkeleton isDesktop={isDesktop} />
+              <TableSkeleton />
             ) : isNotFound ? (
               <div
                 style={{
@@ -224,7 +214,6 @@ export default function Dashboard() {
                   marginTop: "1rem",
                 }}
               >
-                {/* 1. Mensaje dinámico según el filtro utilizado */}
                 <p
                   style={{
                     marginBottom: "1rem",
@@ -245,7 +234,6 @@ export default function Dashboard() {
                   )}
                 </p>
 
-                {/* 2. Botón adaptativo que precarga el campo correspondiente en el modal */}
                 <button
                   className="btn btn-primary"
                   onClick={() => {
@@ -263,129 +251,216 @@ export default function Dashboard() {
                 </button>
               </div>
             ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th>SKU</th>
-                    <th>PLU</th>
-                    <th>Descripción</th>
-                    <th>Subcategoría</th>
-                    <th>Categoría</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* INTERFAZ UNIFICADA EN BLOQUES RESPONSIVOS CON LÁPIZ UBICUO */}
+                <div
+                  className="products-mobile-list"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1rem",
+                    marginTop: "1rem",
+                  }}
+                >
                   {filteredProducts.map((item, idx) => (
-                    <tr key={item.id || idx}>
-                      <td data-label="SKU">
-                        <strong>{item.sku}</strong>
-                      </td>
-                      <td data-label="PLU">
-                        <strong>{item.plu || "-"}</strong>
-                      </td>
-                      <td data-label="Descripción">
-                        <div className="product-desc">
-                          <span className="product-desc-title">
-                            {item.desc}
+                    <div
+                      key={item.id || idx}
+                      className="product-mobile-card"
+                      style={{
+                        padding: "1.25rem",
+                        backgroundColor: "#fff",
+                        borderRadius: "10px",
+                        border: "1px solid #e2e8f0",
+                        position: "relative", // Clave para el posicionamiento absoluto del lápiz
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                        transition: "box-shadow 0.2s ease",
+                      }}
+                    >
+                      {/* Fila superior: Identificadores y Badge de Estado */}
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          marginBottom: "0.75rem",
+                          paddingRight: "2.5rem", // Evita colisiones con el lápiz superior/lateral si la card es pequeña
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "0.2rem",
+                          }}
+                        >
+                          <span
+                            style={{ fontSize: "0.85rem", color: "#64748b" }}
+                          >
+                            SKU:{" "}
+                            <strong style={{ color: "#1e293b" }}>
+                              {item.sku}
+                            </strong>
                           </span>
+                          {item.plu && (
+                            <span
+                              style={{
+                                fontSize: "0.80rem",
+                                color: "#64748b",
+                              }}
+                            >
+                              PLU:{" "}
+                              <strong style={{ color: "#475569" }}>
+                                {item.plu}
+                              </strong>
+                            </span>
+                          )}
                         </div>
-                      </td>
-                      <td data-label="Subcategoría">
-                        <span className="product-desc-sub">{item.sub}</span>
-                      </td>
-                      <td data-label="Categoría">{item.cat}</td>
-                      <td
-                        data-label="Estado"
-                        onClick={() => {
-                          if (isDesktop) {
+                        <span
+                          className={`badge ${item.status === "DISPONIBLE" ? "badge-available" : "badge-break"}`}
+                          onClick={() => {
                             const newStatus =
                               item.status === "DISPONIBLE"
                                 ? "NO DISPONIBLE"
                                 : "DISPONIBLE";
                             handleStatusChange(item.id!, newStatus);
-                          }
-                        }}
-                        style={{ cursor: isDesktop ? "pointer" : "default" }}
-                      >
-                        <span
-                          className={`badge ${item.status === "DISPONIBLE" ? "badge-available" : "badge-break"}`}
+                          }}
+                          style={{
+                            cursor: "pointer",
+                            userSelect: "none",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                          }}
+                          title="Click para cambiar estado rápido"
                         >
                           {item.status}
                         </span>
-                      </td>
-                      <td data-label="Acciones">
-                        <div
-                          className="action-container"
-                          style={{
-                            display: "flex",
-                            gap: "0.5rem",
-                            alignItems: "center",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          {isDesktop && (
-                            <button
-                              className="edit-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(item.id!);
-                              }}
-                              title="Editar"
-                              style={{
-                                padding: "0.6rem",
-                                fontSize: "1.1rem",
-                                minWidth: "40px",
-                                minHeight: "40px",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              ✏️
-                            </button>
-                          )}
+                      </div>
 
-                          {!isDesktop && (
-                            <div
-                              className="action-btns"
-                              style={{ display: "flex", gap: "0.25rem" }}
-                            >
-                              <button
-                                className="action-btn action-btn-success"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(item.id!, "DISPONIBLE");
-                                }}
-                              >
-                                Disponible
-                              </button>
-                              <button
-                                className="action-btn action-btn-danger"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(item.id!, "NO DISPONIBLE");
-                                }}
-                              >
-                                Quiebre
-                              </button>
-                              <button
-                                className="action-btn action-btn-primary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(item.id!);
-                                }}
-                              >
-                                Editar
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                      {/* Descripción del Producto */}
+                      <h3
+                        style={{
+                          fontSize: "1rem",
+                          fontWeight: "600",
+                          margin: "0 0 0.35rem 0",
+                          color: "#1e293b",
+                          lineHeight: "1.4",
+                          paddingRight: "2.5rem", // Espacio de resguardo para que el texto no toque el botón
+                        }}
+                      >
+                        {item.desc}
+                      </h3>
+
+                      {/* Jerarquía de Categorías */}
+                      <p
+                        style={{
+                          fontSize: "0.85rem",
+                          margin: "0",
+                          color: "#64748b",
+                          paddingRight: "2.5rem", // Protección del área del lápiz
+                        }}
+                      >
+                        {item.cat} {item.sub && ` > ${item.sub}`}
+                      </p>
+
+                      {/* ACCIÓN ÚNICA: Lápiz de edición universal (Mobile & Desktop) */}
+                      <button
+                        className="action-btn-edit-universal"
+                        onClick={() => handleEdit(item.id!)}
+                        title="Editar producto"
+                        style={{
+                          position: "absolute",
+                          bottom: "1.25rem",
+                          right: "1.25rem",
+                          background: "#f8fafc",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "8px",
+                          width: "36px",
+                          height: "36px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          fontSize: "1rem",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+                        }}
+                      >
+                        ✏️
+                      </button>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+
+                {/* BLOQUE DE PAGINACIÓN */}
+                {totalPages > 1 && (
+                  <div
+                    className="pagination-controls"
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginTop: "1.5rem",
+                      padding: "0.5rem 0",
+                    }}
+                  >
+                    <button
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="page-btn"
+                      style={{
+                        padding: "0.4rem 0.8rem",
+                        cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {"<<"}
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="page-btn"
+                      style={{
+                        padding: "0.4rem 0.8rem",
+                        cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {"<"}
+                    </button>
+                    <span
+                      className="page-info"
+                      style={{ fontSize: "0.9rem", margin: "0 0.5rem" }}
+                    >
+                      Página <strong>{currentPage}</strong> de {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="page-btn"
+                      style={{
+                        padding: "0.4rem 0.8rem",
+                        cursor:
+                          currentPage === totalPages
+                            ? "not-allowed"
+                            : "pointer",
+                      }}
+                    >
+                      {">"}
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="page-btn"
+                      style={{
+                        padding: "0.4rem 0.8rem",
+                        cursor:
+                          currentPage === totalPages
+                            ? "not-allowed"
+                            : "pointer",
+                      }}
+                    >
+                      {">>"}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -554,8 +629,8 @@ export default function Dashboard() {
   );
 }
 
-// SUBCOMPONENTE DE SKELETON RESPONSIVE REUTILIZABLE
-function TableSkeleton({ isDesktop }: { isDesktop: boolean }) {
+// SUBCOMPONENTE DE SKELETON EMBELLECIDO Y COHERENTE
+function TableSkeleton() {
   const skeletonPulseStyle = {
     animation: "pulse 1.5s infinite ease-in-out",
     backgroundColor: "#e2e8f0",
@@ -563,99 +638,62 @@ function TableSkeleton({ isDesktop }: { isDesktop: boolean }) {
     height: "20px",
   };
 
-  if (!isDesktop) {
-    return (
-      <div
-        className="skeleton-mobile-container"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-          marginTop: "1rem",
-        }}
-      >
-        {[1, 2, 3].map((n) => (
+  return (
+    <div
+      className="skeleton-mobile-container"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "1rem",
+        marginTop: "1rem",
+      }}
+    >
+      {[1, 2, 3].map((n) => (
+        <div
+          key={n}
+          className="card"
+          style={{
+            padding: "1.25rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem",
+            backgroundColor: "#fff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "10px",
+            position: "relative",
+          }}
+        >
           <div
-            key={n}
-            className="card"
+            style={{ ...skeletonPulseStyle, width: "35%", height: "14px" }}
+          />
+          <div
+            style={{ ...skeletonPulseStyle, width: "25%", height: "12px" }}
+          />
+          <div
+            style={{ ...skeletonPulseStyle, width: "75%", height: "20px" }}
+          />
+          <div
+            style={{ ...skeletonPulseStyle, width: "50%", height: "14px" }}
+          />
+          {/* Esqueleto del botón flotante en la misma posición relativa exacta */}
+          <div
             style={{
-              padding: "1rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
+              position: "absolute",
+              bottom: "1.25rem",
+              right: "1.25rem",
             }}
           >
             <div
-              style={{ ...skeletonPulseStyle, width: "40%", height: "16px" }}
+              style={{
+                ...skeletonPulseStyle,
+                width: "36px",
+                height: "36px",
+                borderRadius: "8px",
+              }}
             />
-            <div
-              style={{ ...skeletonPulseStyle, width: "85%", height: "22px" }}
-            />
-            <div
-              style={{ ...skeletonPulseStyle, width: "60%", height: "14px" }}
-            />
-            <div
-              style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}
-            >
-              <div style={{ ...skeletonPulseStyle, flex: 1, height: "34px" }} />
-              <div style={{ ...skeletonPulseStyle, flex: 1, height: "34px" }} />
-              <div style={{ ...skeletonPulseStyle, flex: 1, height: "34px" }} />
-            </div>
           </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <table style={{ marginTop: "1rem" }}>
-      <thead>
-        <tr>
-          <th>SKU</th>
-          <th>PLU</th>
-          <th>Descripción</th>
-          <th>Subcategoría</th>
-          <th>Categoría</th>
-          <th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {[1, 2, 3, 4].map((n) => (
-          <tr key={n}>
-            <td>
-              <div style={{ ...skeletonPulseStyle, width: "70px" }} />
-            </td>
-            <td>
-              <div style={{ ...skeletonPulseStyle, width: "50px" }} />
-            </td>
-            <td>
-              <div style={{ ...skeletonPulseStyle, width: "180px" }} />
-            </td>
-            <td>
-              <div style={{ ...skeletonPulseStyle, width: "100px" }} />
-            </td>
-            <td>
-              <div style={{ ...skeletonPulseStyle, width: "90px" }} />
-            </td>
-            <td>
-              <div
-                style={{
-                  ...skeletonPulseStyle,
-                  width: "85px",
-                  borderRadius: "20px",
-                  height: "24px",
-                }}
-              />
-            </td>
-            <td>
-              <div
-                style={{ ...skeletonPulseStyle, width: "40px", height: "35px" }}
-              />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+        </div>
+      ))}
+    </div>
   );
 }

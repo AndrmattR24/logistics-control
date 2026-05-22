@@ -944,3 +944,160 @@ tr:not(:last-child) {
     transform: rotate(360deg);
   }
 }
+
+/* ==========================================
+   CONTROLES DE PAGINACIÓN
+   ========================================== */
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid #f1f5f9; /* Línea sutil de separación */
+}
+
+/* Botones de página */
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569; /* Gris pizarra intermedio */
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Efecto Hover (Puntero encima) */
+.page-btn:not(:disabled):hover {
+  color: #2563eb; /* Azul primario */
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Efecto Active (Al hacer clic) */
+.page-btn:not(:disabled):active {
+  transform: translateY(0);
+  background-color: #f1f5f9;
+}
+
+/* Estado Deshabilitado (Cuando no se puede ir más allá) */
+.page-btn:disabled {
+  color: #94a3b8; /* Gris apagado */
+  background-color: #f8fafc;
+  border-color: #f1f5f9;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Texto informativo de la página ("Página X de Y") */
+.page-info {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0 0.75rem;
+  white-space: nowrap;
+}
+
+.page-info strong {
+  color: #1e293b; /* Resalta el número de página actual */
+  font-weight: 600;
+}
+
+/* ==========================================
+   AJUSTES RESPONSIVE (MÓVILES)
+   ========================================== */
+@media (max-width: 768px) {
+  .pagination-controls {
+    gap: 0.35rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    width: 100%;
+  }
+
+  /* Hacemos los botones un poco más grandes para facilitar el toque táctil */
+  .page-btn {
+    min-width: 42px;
+    height: 42px;
+    font-size: 0.9rem;
+  }
+
+  .page-info {
+    font-size: 0.8rem;
+    margin: 0 0.4rem;
+  }
+}
+
+@media (min-width: 769px) {
+  /* 1. Forzar el layout de Grid en el contenedor principal */
+  .main-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 340px !important;
+    gap: 1.5rem !important;
+    align-items: start !important;
+  }
+
+  /* 2. Forzar que el contenedor de la tabla no use flexbox de mobile */
+  .table-container {
+    display: block !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+  }
+}
+
+/* ===================================================
+   CONTROL RESPONSIVO DEL ICONO DE EDICIÓN
+   =================================================== */
+
+/* Por defecto en Mobile: Ocultar botón y esqueleto de edición */
+.action-btn-edit-desktop {
+  display: none !important;
+}
+
+/* Vista Desktop (Pantallas grandes) */
+@media (min-width: 769px) {
+  /* Distribución de la grilla principal */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  /* Habilitamos el contenedor relativo para posicionar el botón flotante */
+  .product-mobile-card {
+    position: relative !important;
+  }
+
+  /* Añadimos un margen derecho a la descripción para que no choque con el icono */
+  .product-card-desc {
+    padding-right: 2.5rem !important;
+  }
+
+  /* ===================================================
+   ESTILOS COMPLEMENTARIOS PARA EL LÁPIZ DE EDICIÓN
+   =================================================== */
+
+/* Asegura el efecto visual al pasar el cursor (o pulsar en mobile) */
+.action-btn-edit-desktop {
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.action-btn-edit-desktop:hover {
+  background-color: #e2e8f0 !important;
+  transform: scale(1.05);
+}
+
+.action-btn-edit-desktop:active {
+  transform: scale(0.95);
+}}
