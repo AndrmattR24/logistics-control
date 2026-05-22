@@ -224,17 +224,42 @@ export default function Dashboard() {
                   marginTop: "1rem",
                 }}
               >
-                <p style={{ marginBottom: "1rem", color: "var(--text-muted)" }}>
-                  El producto con SKU "{searchSku}" no existe en el sistema.
+                {/* 1. Mensaje dinámico según el filtro utilizado */}
+                <p
+                  style={{
+                    marginBottom: "1rem",
+                    color: "var(--text-muted)",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  {searchSku.trim() !== "" ? (
+                    <>
+                      El producto con SKU/PLU <strong>"{searchSku}"</strong> no
+                      existe en el sistema.
+                    </>
+                  ) : (
+                    <>
+                      No se encontraron productos que coincidan con la
+                      descripción <strong>"{searchDesc}"</strong>.
+                    </>
+                  )}
                 </p>
+
+                {/* 2. Botón adaptativo que precarga el campo correspondiente en el modal */}
                 <button
                   className="btn btn-primary"
                   onClick={() => {
-                    setModalSku(searchSku);
+                    if (searchSku.trim() !== "") {
+                      setModalSku(searchSku);
+                    } else if (searchDesc.trim() !== "") {
+                      setModalDesc(searchDesc.toUpperCase());
+                    }
                     openModal();
                   }}
                 >
-                  Registrar SKU "{searchSku}"
+                  {searchSku.trim() !== ""
+                    ? `Registrar SKU "${searchSku}"`
+                    : `Registrar Producto: "${searchDesc.toUpperCase()}"`}
                 </button>
               </div>
             ) : (

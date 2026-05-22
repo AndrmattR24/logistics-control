@@ -1,4 +1,4 @@
-import { collection, getDocs, doc, updateDoc, addDoc, query, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, addDoc, query, limit, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Product, ProductStatus } from '../domain/types';
 
@@ -17,7 +17,7 @@ export class ProductRepository {
       const productsRef = collection(db, 'products');
       
       // Creamos la consulta explícita con el límite
-      const q = query(productsRef, limit(30));
+      const q = query(productsRef, orderBy("desc", "asc"), limit(30));
 
       const querySnapshot = await getDocs(q);
       
