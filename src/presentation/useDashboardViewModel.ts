@@ -1,32 +1,35 @@
-import { useState, useEffect } from 'react';
-import { ProductRepository } from '../repositories/ProductRepository';
-import { DashboardMetrics } from '../domain/DashboardMetrics';
-import type { Product, ProductStatus } from '../domain/types';
+import { useState, useEffect, useMemo } from "react";
+import { ProductRepository } from "../repositories/ProductRepository";
+import { DashboardMetrics } from "../domain/DashboardMetrics";
+import type { Product, ProductStatus } from "../domain/types";
 
 export function useDashboardViewModel() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchSku, setSearchSku] = useState<string>('');
-  const [searchDesc, setSearchDesc] = useState<string>('');
+  const [searchSku, setSearchSku] = useState<string>("");
+  const [searchDesc, setSearchDesc] = useState<string>("");
   const [isAddingProduct, setIsAddingProduct] = useState<boolean>(false);
-  
+
   // Estado para controlar si estamos editando y qué ID se está modificando
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   // Campos del formulario (compartidos para creación y edición)
-  const [modalSku, setModalSku] = useState<string>('');
-  const [modalDesc, setModalDesc] = useState<string>('');
-  const [modalSub, setModalSub] = useState<string>('');
-  const [modalCat, setModalCat] = useState<string>('CARNES');
-  const [modalPlu, setModalPlu] = useState<string>('');
+  const [modalSku, setModalSku] = useState<string>("");
+  const [modalDesc, setModalDesc] = useState<string>("");
+  const [modalSub, setModalSub] = useState<string>("");
+  const [modalCat, setModalCat] = useState<string>("CARNES");
+  const [modalPlu, setModalPlu] = useState<string>("");
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
+  // MODIFICADO: Ahora usa el método optimizado getRecent()
   const fetchProducts = async () => {
+    setLoading(true); // Asegúrate de que el estado de carga se active al iniciar la petición
     try {
-      const data = await ProductRepository.getAll();
+      // 1. Pide solo los 30 más recientes
+      const data = await ProductRepository.getRecent();
       setProducts(data);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -36,7 +39,7 @@ export function useDashboardViewModel() {
   };
 
   const handleStatusChange = async (id: string, newStatus: ProductStatus) => {
-    const index = products.findIndex(p => p.id === id);
+    const index = products.findIndex((p) => p.id === id);
     if (index === -1) return;
     const product = products[index];
     if (product.status === newStatus) return;
@@ -59,14 +62,14 @@ export function useDashboardViewModel() {
 
   // Carga los datos de un producto existente en el formulario y abre el modal
   const loadProductToEdit = (id: string) => {
-    const product = products.find(p => p.id === id);
+    const product = products.find((p) => p.id === id);
     if (!product) return;
 
     setEditingProductId(id);
     setModalSku(product.sku);
-    setModalPlu(product.plu || '');
+    setModalPlu(product.plu || "");
     setModalDesc(product.desc);
-    setModalSub(product.sub === '-' ? '' : product.sub || '');
+    setModalSub(product.sub === "-" ? "" : product.sub || "");
     setModalCat(product.cat);
     setIsAddingProduct(true);
   };
@@ -75,13 +78,13 @@ export function useDashboardViewModel() {
     if (e) e.preventDefault();
     if (!modalSku || !modalDesc || !modalCat) return;
     try {
-      const newProductData: Omit<Product, 'id'> = {
+      const newProductData: Omit<Product, "id"> = {
         sku: modalSku,
         plu: modalPlu,
         desc: modalDesc.toUpperCase(),
-        sub: modalSub ? modalSub.toUpperCase() : '-',
+        sub: modalSub ? modalSub.toUpperCase() : "-",
         cat: modalCat,
-        status: 'DISPONIBLE'
+        status: "DISPONIBLE",
       };
       const newProduct = await ProductProductRepository.create(newProductData);
       setProducts([newProduct, ...products]);
@@ -95,7 +98,7 @@ export function useDashboardViewModel() {
   const handleUpdateProduct = async () => {
     if (!editingProductId || !modalSku || !modalDesc || !modalCat) return;
 
-    const currentProduct = products.find(p => p.id === editingProductId);
+    const currentProduct = products.find((p) => p.id === editingProductId);
     if (!currentProduct) return;
 
     // 1. Estructuramos los datos actualizados conservando el ID y el Estado actual
@@ -104,26 +107,30 @@ export function useDashboardViewModel() {
       sku: modalSku,
       plu: modalPlu,
       desc: modalDesc.toUpperCase(),
-      sub: modalSub ? modalSub.toUpperCase() : '-',
+      sub: modalSub ? modalSub.toUpperCase() : "-",
       cat: modalCat,
     };
 
     // 2. Actualización optimista inmediata en la UI para mantenerla fluida
-    const updatedProducts = products.map(p => p.id === editingProductId ? updatedProduct : p);
+    const updatedProducts = products.map((p) =>
+      p.id === editingProductId ? updatedProduct : p,
+    );
     setProducts(updatedProducts);
 
     try {
       // 3. Forzamos la llamada real a la persistencia eliminando el condicional silencioso
       await ProductRepository.update(editingProductId, updatedProduct);
-      
+
       // 4. Limpiamos y cerramos el modal SÓLO si la base de datos confirmó el éxito
       resetForm();
     } catch (error) {
       console.error("Error updating product in database:", error);
-      
+
       // 5. Rollback: Si la API falla, revertimos la UI consultando el estado real del servidor
-      fetchProducts(); 
-      alert("No se pudieron consolidar los cambios en el servidor. La vista ha sido revertida.");
+      fetchProducts();
+      alert(
+        "No se pudieron consolidar los cambios en el servidor. La vista ha sido revertida.",
+      );
     }
   };
 
@@ -138,17 +145,25 @@ export function useDashboardViewModel() {
 
   const resetForm = () => {
     setEditingProductId(null);
-    setModalSku('');
-    setModalPlu('');
-    setModalDesc('');
-    setModalSub('');
-    setModalCat('CARNES');
+    setModalSku("");
+    setModalPlu("");
+    setModalDesc("");
+    setModalSub("");
+    setModalCat("CARNES");
     setIsAddingProduct(false);
   };
 
-  const metrics = DashboardMetrics.calculate(products);
-  const filteredProducts = DashboardMetrics.filterProducts(products, searchSku, searchDesc);
-  const isNotFound = searchSku.trim() !== '' && filteredProducts.length === 0;
+  // Las métricas SÓLO se recalculan si el array original de productos cambia
+  const metrics = useMemo(() => {
+    return DashboardMetrics.calculate(products);
+  }, [products]);
+
+  // El filtrado SÓLO se procesa si cambian los productos o los términos de búsqueda
+  const filteredProducts = useMemo(() => {
+    return DashboardMetrics.filterProducts(products, searchSku, searchDesc);
+  }, [products, searchSku, searchDesc]);
+
+  const isNotFound = searchSku.trim() !== "" && filteredProducts.length === 0;
 
   return {
     state: {
@@ -159,27 +174,27 @@ export function useDashboardViewModel() {
       isNotFound,
       metrics,
       isAddingProduct,
-      editingProductId, 
+      editingProductId,
       modalSku,
       modalPlu,
       modalDesc,
       modalSub,
-      modalCat
+      modalCat,
     },
     actions: {
       setSearchSku,
       setSearchDesc,
       handleStatusChange,
       handleAddProduct,
-      handleUpdateProduct, 
-      loadProductToEdit,   
+      handleUpdateProduct,
+      loadProductToEdit,
       setModalSku,
       setModalPlu,
       setModalDesc,
       setModalSub,
       setModalCat,
       openModal,
-      closeModal
-    }
+      closeModal,
+    },
   };
 }
