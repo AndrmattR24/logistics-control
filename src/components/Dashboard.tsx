@@ -275,25 +275,29 @@ export default function Dashboard() {
                             flexWrap: "wrap",
                           }}
                         >
-                          <button
-                            className="edit-btn"
-                            onClick={(e) => {
-                              e.stopPropagation(); // Detiene la propagación del evento táctil en móvil
-                              handleEdit(item.id!);
-                            }}
-                            title="Editar"
-                            style={{
-                              padding: "0.6rem",
-                              fontSize: "1.1rem",
-                              minWidth: "40px",
-                              minHeight: "40px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            ✏️
-                          </button>
+                          {/* CORRECCIÓN: El lápiz ahora solo aparece si isDesktop es true */}
+                          {isDesktop && (
+                            <button
+                              className="edit-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(item.id!);
+                              }}
+                              title="Editar"
+                              style={{
+                                padding: "0.6rem",
+                                fontSize: "1.1rem",
+                                minWidth: "40px",
+                                minHeight: "40px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              ✏️
+                            </button>
+                          )}
+
                           {!isDesktop && (
                             <div
                               className="action-btns"
