@@ -86,7 +86,10 @@ export function useDashboardViewModel() {
         cat: modalCat,
         status: "DISPONIBLE",
       };
-      const newProduct = await ProductProductRepository.create(newProductData);
+
+      // CORREGIDO: Cambiado ProductProductRepository por ProductRepository
+      const newProduct = await ProductRepository.create(newProductData);
+
       setProducts([newProduct, ...products]);
       resetForm();
     } catch (error) {
