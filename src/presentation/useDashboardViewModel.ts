@@ -29,7 +29,7 @@ export function useDashboardViewModel() {
     setLoading(true); // Asegúrate de que el estado de carga se active al iniciar la petición
     try {
       // 1. Pide solo los 30 más recientes
-      const data = await ProductRepository.getRecent();
+      const data = await ProductRepository.getAll();
       setProducts(data);
     } catch (error) {
       console.error("Error fetching data:", error);
